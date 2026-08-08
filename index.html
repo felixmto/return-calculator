@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Return multiple calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#EDF0EE; --panel:#FFFFFF; --ink:#191E1B; --muted:#697570; --rule:#D2D8D4;
+  --pine:#2F5D50; --pine-soft:#E2EBE7; --plum:#6B3F6E; --amber:#8A5714; --amber-soft:#F3EADB;
+  --mono:'IBM Plex Mono',ui-monospace,monospace; --sans:'IBM Plex Sans',system-ui,sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;padding:32px 20px 64px;background:var(--canvas);color:var(--ink);
+  font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:840px;margin:0 auto;}
+
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;margin-bottom:22px;}
+.title{font-size:30px;font-weight:600;letter-spacing:-0.02em;line-height:1.15;margin:0 0 8px;}
+.lede{font-size:14.5px;color:var(--muted);margin:0;max-width:58ch;}
+.declutter{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;padding-top:8px;}
+.declutter input{width:14px;height:14px;accent-color:var(--pine);margin:0;}
+
+.modes{display:flex;margin-bottom:20px;border:1px solid var(--ink);border-radius:2px;width:fit-content;}
+.modes button{font-family:var(--mono);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;
+  padding:9px 18px;border:none;background:transparent;color:var(--ink);cursor:pointer;}
+.modes button[aria-pressed="true"]{background:var(--ink);color:var(--panel);}
+
+.hero{background:var(--panel);border:1px solid var(--rule);border-radius:2px;padding:28px 28px 24px;margin-bottom:20px;}
+.hero-top{display:flex;flex-wrap:wrap;align-items:flex-end;gap:26px;margin-bottom:26px;}
+.moic{font-family:var(--mono);font-size:76px;font-weight:500;line-height:0.85;letter-spacing:-0.03em;}
+.hero-stats{display:flex;gap:24px;flex-wrap:wrap;padding-bottom:6px;}
+.stat-label{font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:5px;}
+.stat-value{font-family:var(--mono);font-size:19px;font-weight:500;margin-top:2px;}
+
+.rail-head{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.rail{position:relative;height:56px;}
+.rail-track{position:absolute;top:22px;left:0;right:0;height:3px;background:var(--rule);}
+.rail-fill{position:absolute;top:22px;left:0;height:3px;background:var(--pine);}
+.rail-marker{position:absolute;top:12px;width:2px;height:23px;background:var(--ink);transform:translateX(-1px);}
+.rail-marker::after{content:attr(data-label);position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;white-space:nowrap;color:var(--ink);}
+.rail-notch{position:absolute;top:16px;width:0;height:15px;border-left:1px dashed var(--amber);}
+.rail-notch::after{content:attr(data-label);position:absolute;top:20px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:10px;white-space:nowrap;color:var(--amber);}
+.rail-scale{display:flex;justify-content:space-between;position:absolute;top:40px;left:0;right:0;font-family:var(--mono);font-size:10px;color:var(--muted);}
+
+.verdict{margin-top:22px;padding:12px 16px;border-radius:2px;font-size:14px;background:var(--pine-soft);border-left:3px solid var(--pine);}
+.verdict.short{background:var(--amber-soft);border-left-color:var(--amber);}
+
+.panel{background:var(--panel);border:1px solid var(--rule);border-radius:2px;padding:22px 28px;margin-bottom:14px;}
+.panel h2{font-family:var(--mono);font-size:11px;letter-spacing:0.14em;text-transform:uppercase;font-weight:500;color:var(--muted);margin:0 0 16px;display:flex;align-items:center;gap:6px;}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;}
+label{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);margin-bottom:6px;}
+input[type=number],select{width:100%;font-family:var(--mono);font-size:16px;color:var(--ink);
+  padding:8px 10px;background:var(--canvas);border:1px solid var(--rule);border-radius:2px;}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--pine);outline-offset:2px;}
+input[type=range]{width:100%;accent-color:var(--plum);}
+.switch{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--ink);cursor:pointer;margin:0;}
+.switch input{width:16px;height:16px;accent-color:var(--pine);margin:0;}
+.collapse{display:none;margin-top:18px;}
+.collapse.open{display:block;}
+.slider-row{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px;}
+.slider-row b{font-family:var(--mono);font-weight:500;color:var(--ink);}
+.hint{font-size:12.5px;color:var(--muted);margin:14px 0 0;}
+.hidden{display:none;}
+.readout{margin-top:18px;padding:14px 16px;background:var(--canvas);border-radius:2px;font-size:13.5px;}
+.readout b{font-family:var(--mono);font-weight:500;}
+
+/* ---------- probability table ---------- */
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:13px;}
+th{text-align:right;font-weight:500;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);padding:0 0 8px;border-bottom:1px solid var(--rule);}
+th:first-child,td:first-child{text-align:left;}
+td{padding:7px 0;border-bottom:1px solid var(--rule);text-align:right;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+td.name{font-family:var(--sans);font-size:14px;}
+td input{width:88px;font-size:14px;padding:5px 8px;text-align:right;}
+.ev{margin-top:18px;display:flex;flex-wrap:wrap;gap:26px;align-items:flex-end;padding:16px;background:var(--canvas);border-radius:2px;}
+.ev-big{font-family:var(--mono);font-size:38px;font-weight:500;line-height:1;}
+.warn{color:var(--amber);font-size:12.5px;margin-top:10px;}
+
+/* ---------- glossary ---------- */
+.term{position:relative;display:inline-block;}
+.term > button{width:16px;height:16px;padding:0;line-height:1;border-radius:50%;
+  border:1px solid var(--muted);background:transparent;color:var(--muted);
+  font-family:var(--mono);font-size:10px;cursor:pointer;flex-shrink:0;}
+.term > button:hover,.term > button[aria-expanded="true"]{background:var(--ink);border-color:var(--ink);color:var(--panel);}
+.tip{display:none;position:absolute;z-index:20;top:24px;left:-8px;width:300px;
+  background:var(--ink);color:#F2F5F3;padding:14px 16px;border-radius:2px;
+  font-family:var(--sans);font-size:13px;line-height:1.5;text-transform:none;letter-spacing:0;font-weight:400;
+  box-shadow:0 6px 22px rgba(25,30,27,0.22);}
+.term.open .tip{display:block;}
+.tip strong{display:block;font-size:13.5px;font-weight:600;margin-bottom:5px;}
+.tip em{color:#B9C4BE;font-style:normal;display:block;margin-top:8px;font-size:12.5px;}
+body.lean .term{display:none;}
+
+@media (max-width:560px){
+  .moic{font-size:56px;} .panel,.hero{padding-left:18px;padding-right:18px;}
+  .tip{width:250px;left:-100px;} td input{width:70px;}
+}
+@media (prefers-reduced-motion:no-preference){.rail-fill,.rail-marker{transition:all .18s ease-out;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <div>
+    <h1 class="title">Seed Return Model</h1>
+    <p class="lede">What a seed check actually returns once dilution, liquidation preference, and time are accounted for. Change any number and everything updates — the <b>?</b> markers explain the terms, and Declutter hides them.</p>
+  </div>
+  <label class="declutter"><input type="checkbox" id="lean" /> Declutter</label>
+</div>
+
+<div class="modes" role="group" aria-label="Investment structure">
+  <button id="mode-priced" aria-pressed="true">Priced round</button>
+  <button id="mode-safe" aria-pressed="false">SAFE</button>
+</div>
+
+<!-- ============ HERO ============ -->
+<div class="hero">
+  <div class="hero-top">
+    <div class="moic" id="o-moic">7.0x</div>
+    <div class="hero-stats">
+      <div>
+        <div class="stat-label">Gross IRR <span class="term" data-term="irr"></span></div>
+        <div class="stat-value" id="o-irr">32%</div>
+      </div>
+      <div>
+        <div class="stat-label">Proceeds</div>
+        <div class="stat-value" id="o-proc">$28M</div>
+      </div>
+      <div>
+        <div class="stat-label">Ownership at exit <span class="term" data-term="dilution"></span></div>
+        <div class="stat-value" id="o-own">20.0%</div>
+      </div>
+      <div>
+        <div class="stat-label" id="o-price-label">Entry post-money <span class="term" data-term="postmoney"></span></div>
+        <div class="stat-value" id="o-post">$20M</div>
+      </div>
+      <div>
+        <div class="stat-label">Share of fund <span class="term" data-term="fundreturner"></span></div>
+        <div class="stat-value" id="o-fundpct">6.2%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rail-head"><span>Exit sensitivity</span><span id="rail-range"></span></div>
+  <div class="rail">
+    <div class="rail-track"></div>
+    <div class="rail-fill" id="rail-fill"></div>
+    <div class="rail-notch" id="rail-notch"></div>
+    <div class="rail-marker" id="rail-marker"></div>
+    <div class="rail-scale"><span>$0M</span><span id="rail-max"></span></div>
+  </div>
+
+  <div class="verdict" id="o-verdict"></div>
+</div>
+
+<!-- ============ ENTRY TERMS ============ -->
+<div class="panel">
+  <h2>Entry terms</h2>
+  <div class="grid">
+    <div>
+      <label for="check">Check size ($M)</label>
+      <input type="number" id="check" value="4" min="0.1" step="0.5" />
+    </div>
+    <div class="priced-only">
+      <label for="own">Ownership at entry (%) <span class="term" data-term="ownership"></span></label>
+      <input type="number" id="own" value="20" min="0.1" max="100" step="0.5" />
+    </div>
+    <div class="safe-only hidden">
+      <label for="cap">Valuation cap ($M) <span class="term" data-term="cap"></span></label>
+      <input type="number" id="cap" value="20" min="1" step="1" />
+    </div>
+    <div class="safe-only hidden">
+      <label for="disc">Discount (%) <span class="term" data-term="discount"></span></label>
+      <input type="number" id="disc" value="20" min="0" max="50" step="5" />
+    </div>
+    <div>
+      <label for="exit">Exit value ($M)</label>
+      <input type="number" id="exit" value="140" min="0" step="10" />
+    </div>
+    <div>
+      <label for="years">Years to exit <span class="term" data-term="holding"></span></label>
+      <input type="number" id="years" value="7" min="0.5" max="20" step="0.5" />
+    </div>
+    <div>
+      <label for="fund">Fund size ($M)</label>
+      <input type="number" id="fund" value="450" min="1" step="25" />
+    </div>
+  </div>
+
+  <div class="safe-only hidden" style="margin-top:16px;">
+    <div class="grid">
+      <div>
+        <label for="safetype">SAFE type <span class="term" data-term="safetype"></span></label>
+        <select id="safetype">
+          <option value="post">Post-money SAFE</option>
+          <option value="pre">Pre-money SAFE</option>
+        </select>
+      </div>
+      <div>
+        <label for="othersafes">Other SAFEs converting ($M) <span class="term" data-term="stacking"></span></label>
+        <input type="number" id="othersafes" value="2" min="0" step="0.5" />
+      </div>
+      <div>
+        <label for="apre">Next round pre-money ($M) <span class="term" data-term="conversion"></span></label>
+        <input type="number" id="apre" value="30" min="1" step="5" />
+      </div>
+    </div>
+    <div class="readout" id="o-readout"></div>
+  </div>
+</div>
+
+<!-- ============ DILUTION ============ -->
+<div class="panel">
+  <label class="switch"><input type="checkbox" id="dil-on" checked /> Model dilution from future rounds <span class="term" data-term="dilution"></span></label>
+  <div class="collapse open" id="dil-box">
+    <div class="grid">
+      <div>
+        <div class="slider-row"><span>Rounds after yours</span><b id="r-out">2</b></div>
+        <input type="range" id="rounds" min="0" max="6" step="1" value="2" />
+      </div>
+      <div>
+        <div class="slider-row"><span>Dilution per round <span class="term" data-term="pool"></span></span><b id="d-out">20%</b></div>
+        <input type="range" id="perround" min="5" max="35" step="1" value="20" />
+      </div>
+    </div>
+    <p class="hint" id="dil-hint"></p>
+  </div>
+</div>
+
+<!-- ============ PREFERENCE ============ -->
+<div class="panel">
+  <label class="switch"><input type="checkbox" id="pref-on" /> Model a liquidation preference <span class="term" data-term="pref"></span></label>
+  <div class="collapse" id="pref-box">
+    <div class="grid">
+      <div>
+        <label for="stack">Total preferred capital raised ($M) <span class="term" data-term="stack"></span></label>
+        <input type="number" id="stack" value="40" min="0" step="5" />
+      </div>
+      <div>
+        <label for="preftype">Preference type <span class="term" data-term="participating"></span></label>
+        <select id="preftype">
+          <option value="non">1x non-participating</option>
+          <option value="part">1x participating</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">Simplified to one pari-passu class at 1x. Real stacks get messier — senior tranches, multiples, caps on participation.</p>
+  </div>
+</div>
+
+<!-- ============ PROBABILITY ============ -->
+<div class="panel">
+  <label class="switch"><input type="checkbox" id="prob-on" /> Include probabilities <span class="term" data-term="ev"></span></label>
+  <div class="collapse" id="prob-box">
+    <table>
+      <thead><tr><th>Outcome</th><th>Exit</th><th>Odds</th><th>Multiple</th><th>Contribution</th></tr></thead>
+      <tbody id="prob-rows"></tbody>
+    </table>
+    <div class="ev">
+      <div>
+        <div class="stat-label">Expected multiple</div>
+        <div class="ev-big" id="o-ev">—</div>
+      </div>
+      <div>
+        <div class="stat-label">Expected proceeds</div>
+        <div class="stat-value" id="o-evproc">—</div>
+      </div>
+      <div>
+        <div class="stat-label">Expected share of fund</div>
+        <div class="stat-value" id="o-evfund">—</div>
+      </div>
+    </div>
+    <div class="warn hidden" id="prob-warn"></div>
+    <p class="hint">Every row runs through the same dilution and preference settings above — so the downside rows are where a preference stack actually shows up.</p>
+  </div>
+</div>
+
+<p class="hint" style="text-align:center;">Gross of fees and carry. Initial check only — no follow-on reserves.</p>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var $ = function(id){ return document.getElementById(id); };
+  var mode = "priced";
+
+  var OUTCOMES = [
+    { name:"Goes to zero",   exit:0,    p:55 },
+    { name:"Modest exit",    exit:60,   p:25 },
+    { name:"Good outcome",   exit:250,  p:15 },
+    { name:"Breakout",       exit:1500, p:5  }
+  ];
+
+  /* ================= GLOSSARY ================= */
+  var GLOSSARY = {
+    postmoney: ["Post-money valuation",
+      "What the company is worth immediately after your money lands. Check size divided by post-money is your ownership — a $4M check at 20% implies a $20M post-money.",
+      "Your multiple is really just exit divided by post-money."],
+    ownership: ["Ownership at entry",
+      "The percentage you own the day the round closes. At seed this drives everything downstream, because every future round chips away from this starting point.",
+      "Seed funds commonly target 15–20%."],
+    dilution: ["Dilution",
+      "When a company issues new shares your percentage shrinks — same shares, smaller slice. It compounds rather than adds: three rounds at 20% each is about 49%, not 60%.",
+      "Pro-rata rights let you buy back in to defend your position."],
+    pool: ["What's inside 'per round'",
+      "Each round dilutes you twice: the new investor's shares, plus the option pool refresh topped up to hire the next wave. 15–25% per round is a reasonable planning range.",
+      "Flat or down rounds dilute far harder than this slider allows."],
+    holding: ["Time to exit",
+      "How long your money is tied up. Multiples ignore time entirely, which is why a 7x can be excellent or mediocre depending on whether it took five years or fourteen.",
+      "Median venture-backed exits run roughly 7–10 years from seed."],
+    irr: ["IRR",
+      "The annualised rate of return — the multiple spread over the holding period. It's how LPs judge performance, because capital locked up for a decade has a real opportunity cost.",
+      "Same 7x: 32% IRR over 7 years, 17% over 12."],
+    fundreturner: ["Returning the fund",
+      "One position paying back the entire fund. It's the bar seed portfolios are built around, because most positions go to zero and the winners carry everything.",
+      "On a $450M fund, a 15% stake needs a $3B exit."],
+    pref: ["Liquidation preference",
+      "Preferred shareholders get paid before common in an exit. A 1x preference means you get your money back off the top before founders and employees see anything.",
+      "It only bites in modest exits — in a great one everyone converts to common."],
+    stack: ["The preference stack",
+      "The total preferred money repaid before common gets anything. It accumulates every round, so by Series C a company can owe $100M+ before a founder share pays out.",
+      "Exits below the stack are where returns quietly die."],
+    participating: ["Participating vs non-participating",
+      "Non-participating: you choose — take your money back, or convert to common and take your percentage. Participating ('double dip'): you take the preference AND your percentage of the rest.",
+      "Participating preferred is founder-unfriendly and rare at seed."],
+    cap: ["Valuation cap",
+      "The ceiling on the valuation your SAFE converts at. If the next round prices above it, you convert as if it priced at the cap — so the cap is the worst price you'll pay.",
+      "A $20M cap on a $4M check gets you roughly 20%."],
+    discount: ["Discount",
+      "A percentage off the next round's price. 20% means you convert at 80% of what Series A investors pay. You get the cap or the discount, whichever is better — never both.",
+      "Discounts only matter when the round prices below the cap."],
+    safetype: ["Post-money vs pre-money SAFE",
+      "Post-money (the YC standard since 2018): ownership locked at check ÷ cap, and other SAFEs don't touch it — founders absorb that. Pre-money: every converting SAFE dilutes every other one.",
+      "The biggest source of 'I thought I owned more than this'."],
+    stacking: ["SAFE stacking",
+      "The total of every other SAFE converting at the same round. On a pre-money SAFE they share the cap with you, so you really own check ÷ (cap + all SAFEs).",
+      "Companies often raise more on SAFEs than anyone tracks."],
+    conversion: ["Conversion round",
+      "SAFEs aren't equity yet — they convert when the company raises a priced round. Until then you don't know what you own, which is the real cost of a SAFE.",
+      "Set this to test how a strong or weak A changes your entry price."],
+    ev: ["Expected value",
+      "Each outcome's return weighted by how likely it is, summed. It answers the question a point estimate hides: what's this position worth given it probably goes to zero?",
+      "A 7x base case at 5% odds is worth less than a 3x at 40%."]
+  };
+
+  function buildTooltips(){
+    document.querySelectorAll(".term").forEach(function(el){
+      var g = GLOSSARY[el.getAttribute("data-term")];
+      if (!g || el.querySelector("button")) return;
+      var btn = document.createElement("button");
+      btn.type = "button"; btn.textContent = "?";
+      btn.setAttribute("aria-label", "What is " + g[0] + "?");
+      btn.setAttribute("aria-expanded", "false");
+      var tip = document.createElement("span");
+      tip.className = "tip"; tip.setAttribute("role", "note");
+      tip.innerHTML = "<strong>" + g[0] + "</strong>" + g[1] + "<em>" + g[2] + "</em>";
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var wasOpen = el.classList.contains("open");
+        closeTips();
+        if (!wasOpen){ el.classList.add("open"); btn.setAttribute("aria-expanded","true"); }
+      });
+      el.appendChild(btn); el.appendChild(tip);
+    });
+  }
+  function closeTips(){
+    document.querySelectorAll(".term.open").forEach(function(el){
+      el.classList.remove("open");
+      el.querySelector("button").setAttribute("aria-expanded","false");
+    });
+  }
+  document.addEventListener("click", closeTips);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape") closeTips(); });
+
+  /* ================= MODEL ================= */
+  function money(n){ return isFinite(n) ? "$" + Math.round(n).toLocaleString() + "M" : "—"; }
+
+  function readInputs(){
+    return {
+      check: parseFloat($("check").value) || 0,
+      own:  (parseFloat($("own").value)  || 0) / 100,
+      exit:  parseFloat($("exit").value) || 0,
+      years: parseFloat($("years").value) || 0,
+      fund:  parseFloat($("fund").value) || 1,
+      cap:   parseFloat($("cap").value)  || 1,
+      disc: (parseFloat($("disc").value) || 0) / 100,
+      other: parseFloat($("othersafes").value) || 0,
+      apre:  parseFloat($("apre").value) || 1,
+      stype: $("safetype").value,
+      dilOn: $("dil-on").checked,
+      rounds: parseInt($("rounds").value, 10),
+      per:   parseFloat($("perround").value) / 100,
+      prefOn: $("pref-on").checked,
+      stack: parseFloat($("stack").value) || 0,
+      ptype: $("preftype").value
+    };
+  }
+
+  function entry(i){
+    if (mode === "priced") return { price: i.own > 0 ? i.check / i.own : 0, own: i.own, via:null };
+    var discPrice = i.apre * (1 - i.disc);
+    var capPrice  = (i.stype === "pre") ? i.cap + i.other + i.check : i.cap;
+    var price = Math.min(capPrice, discPrice);
+    return { price:price, own: price > 0 ? i.check / price : 0,
+             via: capPrice <= discPrice ? "cap" : "discount",
+             capPrice:capPrice, discPrice:discPrice };
+  }
+
+  function finalOwnership(i, own0){
+    return own0 * Math.pow(1 - i.per, i.dilOn ? i.rounds : 0);
+  }
+
+  function proceedsAt(i, ownFinal, exitVal){
+    var asConverted = ownFinal * exitVal;
+    if (!i.prefOn || i.stack <= 0) return asConverted;
+    var yourPref = Math.min(i.check, (i.check / i.stack) * exitVal);
+    if (i.ptype === "part") return yourPref + ownFinal * Math.max(0, exitVal - i.stack);
+    return Math.max(asConverted, yourPref);
+  }
+
+  // Annualised return. A multiple with no clock attached isn't a return.
+  function irr(moic, years){
+    if (years <= 0 || moic <= 0) return null;
+    return Math.pow(moic, 1 / years) - 1;
+  }
+
+  function exitToReturnFund(i, ownFinal){
+    if (ownFinal <= 0) return Infinity;
+    var lo = 0, hi = Math.max(i.fund / ownFinal * 2, 1000);
+    if (proceedsAt(i, ownFinal, hi) < i.fund) return Infinity;
+    for (var n = 0; n < 60; n++){
+      var mid = (lo + hi) / 2;
+      if (proceedsAt(i, ownFinal, mid) < i.fund) lo = mid; else hi = mid;
+    }
+    return hi;
+  }
+
+  /* ================= PROBABILITY TABLE ================= */
+  function buildProbRows(){
+    var body = $("prob-rows");
+    body.innerHTML = OUTCOMES.map(function(o, idx){
+      return '<tr>'
+        + '<td class="name">' + o.name + '</td>'
+        + '<td><input type="number" id="px-' + idx + '" value="' + o.exit + '" min="0" step="10" /></td>'
+        + '<td><input type="number" id="pp-' + idx + '" value="' + o.p + '" min="0" max="100" step="1" /></td>'
+        + '<td id="pm-' + idx + '">—</td>'
+        + '<td id="pc-' + idx + '">—</td>'
+        + '</tr>';
+    }).join("");
+    OUTCOMES.forEach(function(o, idx){
+      $("px-" + idx).addEventListener("input", render);
+      $("pp-" + idx).addEventListener("input", render);
+    });
+  }
+
+  function renderProbability(i, ownFinal){
+    var totalP = 0, evProceeds = 0;
+    var rows = OUTCOMES.map(function(o, idx){
+      var x = parseFloat($("px-" + idx).value) || 0;
+      var p = parseFloat($("pp-" + idx).value) || 0;
+      totalP += p;
+      var proc = proceedsAt(i, ownFinal, x);
+      var m = i.check > 0 ? proc / i.check : 0;
+      return { x:x, p:p, proc:proc, m:m };
+    });
+
+    // Normalise so the maths stays honest even while you're mid-edit.
+    var scale = totalP > 0 ? 100 / totalP : 0;
+    rows.forEach(function(r, idx){
+      var weighted = r.m * (r.p * scale) / 100;
+      evProceeds += r.proc * (r.p * scale) / 100;
+      $("pm-" + idx).textContent = r.m.toFixed(1) + "x";
+      $("pc-" + idx).textContent = weighted.toFixed(2) + "x";
+    });
+
+    var evMoic = i.check > 0 ? evProceeds / i.check : 0;
+    $("o-ev").textContent = evMoic.toFixed(2) + "x";
+    $("o-evproc").textContent = money(evProceeds);
+    $("o-evfund").textContent = (evProceeds / i.fund * 100).toFixed(1) + "%";
+
+    var warn = $("prob-warn");
+    if (Math.abs(totalP - 100) > 0.5){
+      warn.classList.remove("hidden");
+      warn.textContent = "Odds sum to " + totalP.toFixed(0) + "%, not 100% — normalised for the maths above, but worth fixing.";
+    } else {
+      warn.classList.add("hidden");
+    }
+  }
+
+  /* ================= RENDER ================= */
+  function render(){
+    var i = readInputs();
+    var e = entry(i);
+    var ownFinal = finalOwnership(i, e.own);
+    var proceeds = proceedsAt(i, ownFinal, i.exit);
+    var moic = i.check > 0 ? proceeds / i.check : 0;
+    var fundPct = proceeds / i.fund * 100;
+    var breakeven = exitToReturnFund(i, ownFinal);
+    var rate = irr(moic, i.years);
+
+    $("r-out").textContent = i.rounds;
+    $("d-out").textContent = Math.round(i.per * 100) + "%";
+    $("dil-hint").textContent = i.rounds > 0
+      ? "Compounded, that's " + ((1 - Math.pow(1 - i.per, i.rounds)) * 100).toFixed(0)
+        + "% total dilution — " + (e.own * 100).toFixed(1) + "% lands at " + (ownFinal * 100).toFixed(1) + "%."
+      : "No dilution applied. Optimistic, but useful as a ceiling.";
+
+    $("o-moic").textContent = moic.toFixed(1) + "x";
+    $("o-irr").textContent  = rate === null ? "—" : (rate * 100).toFixed(0) + "%";
+    $("o-proc").textContent = money(proceeds);
+    $("o-own").textContent  = (ownFinal * 100).toFixed(1) + "%";
+    $("o-post").textContent = money(e.price);
+    $("o-fundpct").textContent = fundPct.toFixed(1) + "%";
+
+    if (mode === "safe"){
+      $("o-readout").innerHTML = e.via === "cap"
+        ? "Converts at the <b>cap</b> — " + money(e.capPrice) + " beats the discounted price of " + money(e.discPrice)
+          + ". You'd own <b>" + (e.own * 100).toFixed(1) + "%</b> at conversion"
+          + (i.stype === "pre" ? ", after sharing the cap with " + money(i.other) + " of other SAFEs." : ".")
+        : "Converts at the <b>discount</b> — " + money(e.discPrice) + " beats the cap of " + money(e.capPrice)
+          + ". You'd own <b>" + (e.own * 100).toFixed(1) + "%</b> at conversion.";
+    }
+
+    var v = $("o-verdict");
+    if (fundPct >= 100){
+      v.className = "verdict";
+      v.textContent = "Returns the fund " + (fundPct / 100).toFixed(1) + " times over"
+        + (rate !== null ? ", at a " + (rate * 100).toFixed(0) + "% IRR over " + i.years + " years." : ".");
+    } else {
+      v.className = "verdict short";
+      v.textContent = "Returns " + fundPct.toFixed(1) + "% of the fund. You'd need an exit of " + money(breakeven)
+        + " for this position to return it alone"
+        + (isFinite(breakeven) && i.exit > 0 ? " — " + (breakeven / i.exit).toFixed(1) + "x the exit modelled here." : ".");
+    }
+
+    drawRail(i, moic, breakeven);
+    if ($("prob-on").checked) renderProbability(i, ownFinal);
+  }
+
+  function drawRail(i, moic, breakeven){
+    var top = Math.max(i.exit * 1.6, isFinite(breakeven) ? breakeven * 1.15 : i.exit * 2, 100);
+    var pct = function(v){ return Math.max(0, Math.min(100, v / top * 100)); };
+    $("rail-fill").style.width = pct(i.exit) + "%";
+    $("rail-marker").style.left = pct(i.exit) + "%";
+    $("rail-marker").setAttribute("data-label", moic.toFixed(1) + "x at " + money(i.exit));
+    var notch = $("rail-notch");
+    if (isFinite(breakeven) && breakeven <= top){
+      notch.style.display = "block";
+      notch.style.left = pct(breakeven) + "%";
+      notch.setAttribute("data-label", "fund returned · " + money(breakeven));
+    } else { notch.style.display = "none"; }
+    $("rail-max").textContent = money(top);
+    $("rail-range").textContent = "$0M – " + money(top);
+  }
+
+  /* ================= WIRING ================= */
+  function setMode(next){
+    mode = next;
+    $("mode-priced").setAttribute("aria-pressed", String(next === "priced"));
+    $("mode-safe").setAttribute("aria-pressed", String(next === "safe"));
+    document.querySelectorAll(".priced-only").forEach(function(el){ el.classList.toggle("hidden", next !== "priced"); });
+    document.querySelectorAll(".safe-only").forEach(function(el){ el.classList.toggle("hidden", next !== "safe"); });
+    $("o-price-label").childNodes[0].nodeValue = next === "safe" ? "Conversion valuation " : "Entry post-money ";
+    render();
+  }
+  $("mode-priced").addEventListener("click", function(){ setMode("priced"); });
+  $("mode-safe").addEventListener("click", function(){ setMode("safe"); });
+
+  // Declutter: strips the glossary for anyone who doesn't need it. Remembered locally.
+  $("lean").addEventListener("change", function(){
+    document.body.classList.toggle("lean", $("lean").checked);
+    closeTips();
+    try { localStorage.setItem("returnCalcLean", $("lean").checked ? "1" : "0"); } catch(err){}
+  });
+  try {
+    if (localStorage.getItem("returnCalcLean") === "1"){
+      $("lean").checked = true;
+      document.body.classList.add("lean");
+    }
+  } catch(err){}
+
+  ["check","own","exit","years","fund","cap","disc","othersafes","apre","rounds","perround","stack"]
+    .forEach(function(id){ $(id).addEventListener("input", render); });
+  ["safetype","preftype"].forEach(function(id){ $(id).addEventListener("change", render); });
+
+  [["dil-on","dil-box"],["pref-on","pref-box"],["prob-on","prob-box"]].forEach(function(p){
+    $(p[0]).addEventListener("change", function(){
+      $(p[1]).classList.toggle("open", $(p[0]).checked);
+      render();
+    });
+  });
+
+  buildProbRows();
+  buildTooltips();
+  render();
+})();
+</script>
+</body>
+</html>
